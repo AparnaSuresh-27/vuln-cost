@@ -3,3 +3,5 @@ data/
 logs/
 .venv/
 test_scripts/
+__pycache__/
+*.pyc
