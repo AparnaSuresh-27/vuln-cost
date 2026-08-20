@@ -1,5 +1,5 @@
-from enums.approach import Approach
-from enums.context_config import ContextConfig
+from vulncost.enums.approach import Approach
+from vulncost.enums.context_config import ContextConfig
 
 # holds the function and subclasses define how the prompt is built
 class PromptBuilder:
