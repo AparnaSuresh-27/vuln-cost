@@ -23,7 +23,7 @@ class PairedFunction: # for structuring each record
         return cls(**filtered)
 
 
-class PairedFunctionLoader():
+class PairedFunctionLoader:
     def __init__(self, idx, data_dir):
         self.data_dir = data_dir
 
