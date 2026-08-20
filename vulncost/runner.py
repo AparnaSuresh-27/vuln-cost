@@ -62,20 +62,16 @@ def main():
     logger.close()
 
     p_c_count = 0
-    # p_v_count = 0
-    # p_b_count = 0
-    # p_r_count = 0
-    for i, idx, target, prediction in enumerate(results):
-        if i%2 == 0:
-            pair_id = i+1
-            (_, pair_target, pair_prediction) = results[pair_id]
+    for i, (idx, target, prediction) in enumerate(results):
+        if i % 2 == 0 and i + 1 < len(results):
+            (_, pair_target, pair_prediction) = results[i + 1]
             if prediction == label_to_pred_str(target):
                 if pair_prediction == label_to_pred_str(pair_target):
                     p_c_count += 1
 
-    p_c = p_c_count/len(results)
-
-    print(p_c)
+    num_pairs = len(results) // 2
+    p_c = p_c_count / num_pairs
+    print(f"P-C: {p_c:.3f}  ({p_c_count}/{num_pairs} pairs both correct)")
 
 if __name__ == "__main__":
     main()
