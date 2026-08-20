@@ -22,7 +22,7 @@ class CallRecord: # things that change per interaction with a model
     context_config: Enum # configuration of context
     agent: Enum # agent infrastructure
     sample_id: str # idx from PrimeVul
-    repeat: int
+    repeat: int # skip now
     call_number: int
     prompt: str
     response: str
