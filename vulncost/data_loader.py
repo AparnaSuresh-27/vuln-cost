@@ -1,6 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 import json
-import os
+from typing import Dict, Iterator
 
 
 
@@ -12,19 +12,27 @@ class PairedFunction: # for structuring each record
     project_url: str
     commit_url: str
     commit_message: str
-    target: bool
+    target: int
     func: str
+
+    @classmethod
+    def from_dict(cls, record: Dict) -> "PairedFunction":
+        allowed = {f.name for f in fields(cls)} # declared field names
+        filtered = {k: v for k, v in record.items() if k in allowed}
+        filtered["idx"] = str(filtered["idx"]) # CallRecord.sample_id is str
+        return cls(**filtered)
 
 
 class PairedFunctionLoader():
     def __init__(self, idx, data_dir):
         self.data_dir = data_dir
 
-    def get_samples(self):
+    def get_samples(self) -> Iterator[PairedFunction]:
         with open(self.data_dir) as file:
-            for line in file: # one record per line 
+            for line in file: # one record per line
                 if line.strip():
-                    function_record = json.loads(line)
+                    record = json.loads(line)
+                    yield PairedFunction.from_dict(record)
                     
                     
 
