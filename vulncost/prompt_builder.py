@@ -1,32 +1,32 @@
-from typing import Optional
-from data_loader import PairedFunctionLoader, PairedFunction
 from enums.approach import Approach
 from enums.context_config import ContextConfig
 
+# holds the function and subclasses define how the prompt is built
 class PromptBuilder:
-
-    def __new__(cls, approach: Approach, context_config: Optional[ContextConfig]):
-
-        # if calling the parent directly intercept and return the correct child
-        routing_table = { 
-            (Approach.context, ContextConfig.function_only): FunctionOnlyPromptBuilder
-        }
-        # Look up the class based on the combination
-        target_class = routing_table.get((approach, context_config))
-        
-        if target_class is None:
-            raise ValueError(f"Invalid class combination: {approach} with  {context_config}")
-
-        # if child calls
-        return super().__new__(target_class)
-
-    def __init__(self, approach: Approach, context_config: Optional[ContextConfig], func: str):
-        self.approach = approach
-        self.context_config = context_config
+    def __init__(self, func: str):
         self.func = func
-        self.prompt = ""
 
+    def build(self) -> str:
+        raise NotImplementedError # subclasses must implement
 
+# for function only scenario in the context approach
 class FunctionOnlyPromptBuilder(PromptBuilder):
-    def prompt(self):
-        self.prompt = f"Classify this function as Vulnerable or Safe and identify CVE and CWE if applicable \n {self.func}"
+    def build(self) -> str:
+        return (
+            "Classify this function as VULNERABLE or SAFE. "
+            "Respond with exactly one word: VULNERABLE or SAFE.\n\n"
+            f"{self.func}"
+        )
+
+
+# the routing depending on approach and context
+def make_prompt_builder(approach: Approach,
+                        context_config: ContextConfig,
+                        func: str) -> PromptBuilder:
+    routing = {
+        (Approach.context, ContextConfig.function_only): FunctionOnlyPromptBuilder,
+    }
+    builder_class = routing.get((approach, context_config))
+    if builder_class is None:
+        raise ValueError(f"No builder for {approach} / {context_config}")
+    return builder_class(func)
