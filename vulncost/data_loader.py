@@ -1,6 +1,6 @@
 from dataclasses import dataclass, fields
 import json
-from typing import Dict, Iterator
+from typing import Dict, Iterator, Optional
 
 
 
@@ -14,6 +14,14 @@ class PairedFunction: # for structuring each record
     commit_message: str
     target: int
     func: str
+    func_hash: str
+    file_name: int
+    file_hash: int
+    cwe: Optional[list[str]]
+    cve: Optional[str]
+    cve_desc: Optional[str]
+    nvd_url: Optional[str]
+
 
     @classmethod
     def from_dict(cls, record: Dict) -> "PairedFunction":
