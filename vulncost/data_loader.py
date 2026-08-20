@@ -24,7 +24,7 @@ class PairedFunction: # for structuring each record
 
 
 class PairedFunctionLoader:
-    def __init__(self, idx, data_dir):
+    def __init__(self, data_dir):
         self.data_dir = data_dir
 
     def get_samples(self) -> Iterator[PairedFunction]:
