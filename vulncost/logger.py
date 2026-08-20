@@ -3,6 +3,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 from enum import Enum
+from typing import Optional
 
  
 
@@ -19,8 +20,8 @@ ALLOWED_STATUS = {"ok", "failed"} # whether the interaction with model was succe
 class CallRecord: # things that change per interaction with a model
     model: str
     approach: Enum  # if it is context or llm vs agent comparison
-    context_config: Enum # configuration of context
-    agent: Enum # agent infrastructure
+    context_config: Optional[Enum] # configuration of context
+    agent: Optional[Enum] # agent infrastructure
     sample_id: str # idx from PrimeVul
     repeat: int # skip now
     call_number: int
