@@ -9,7 +9,7 @@ import time
 
 MODEL_ID = "mlx-community/Qwen2.5-Coder-7B-Instruct-4bit" #small model for my gpu
 DATA_PATH = "data/primevul_valid_paired.jsonl"
-SUBSET = 20 # number of records (kept even to keep pairs stay whole)
+SUBSET = 10000 # number of records (kept even to keep pairs stay whole)
 
 def label_to_pred_str(target: int) -> str:
     # ground-truth label as a string to compare against the parsed prediction
