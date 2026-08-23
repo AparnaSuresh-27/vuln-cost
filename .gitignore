@@ -5,3 +5,4 @@ logs/
 test_scripts/
 __pycache__/
 *.pyc
+.env
