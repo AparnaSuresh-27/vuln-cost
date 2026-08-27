@@ -3,20 +3,43 @@ import os
 import subprocess
 import tempfile
 from dataclasses import dataclass, asdict
+from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
+EXTRACT_DIR = Path("data/extracted")
+
 
 @dataclass
-class CallerCalleeResult: # extraction output for one function in one file
+class CallerCalleeResult:  # extraction output for one function in one file
     func_name: str
-    callees: list[str] # functions this target calls (same-file resolvable)
-    callers: list[str] # functions that call the target (same-file only)
-    callee_bodies: dict # name -> source text, for callees defined in the file
-    caller_bodies: dict # name -> source text, for callers defined in the file
+    callees: list[str]
+    callers: list[str]
+    callee_bodies: dict
+    caller_bodies: dict
+    # resolution stats (computed automatically for feasibility reporting)
+    n_callees: int = 0
+    n_callees_resolved: int = 0
+    n_callers: int = 0
+    n_callers_resolved: int = 0
+    unresolved_callees: list = None
+    unresolved_callers: list = None
+
+    def __post_init__(self):
+        def resolved(names, bodies):
+            return [n for n in names
+                    if bodies.get(n, "<empty>") not in ("<empty>", "", None)]
+        rc = resolved(self.callees, self.callee_bodies)
+        rr = resolved(self.callers, self.caller_bodies)
+        self.n_callees = len(self.callees)
+        self.n_callees_resolved = len(rc)
+        self.n_callers = len(self.callers)
+        self.n_callers_resolved = len(rr)
+        self.unresolved_callees = [n for n in self.callees if n not in rc]
+        self.unresolved_callers = [n for n in self.callers if n not in rr]
 
 
 def _joern_binary() -> str:
@@ -26,27 +49,21 @@ def _joern_binary() -> str:
     return os.path.join(home, "joern")
 
 
-# Joern script template: build CPG on one file, emit callers/callees as JSON.
-# {src} = path to the source file, {fn} = target function name.
 _JOERN_SCRIPT = '''
 importCode(inputPath="{src}", projectName="extract_tmp")
 
 val target = "{fn}"
 
-// callees: named functions the target calls, excluding <operator>.* builtins
 val callees = cpg.method.name(target).call.name
   .filterNot(_.startsWith("<operator>"))
   .dedup.l
 
-// callers: methods that call the target
 val callers = cpg.method.name(target).caller.name.dedup.l
 
-// bodies of callees that are actually DEFINED in this file
 val calleeBodies = callees.flatMap {{ c =>
   cpg.method.name(c).code.headOption.map(code => (c, code))
 }}.toMap
 
-// bodies of callers defined in this file
 val callerBodies = callers.flatMap {{ c =>
   cpg.method.name(c).code.headOption.map(code => (c, code))
 }}.toMap
@@ -65,7 +82,6 @@ new PrintWriter("{out}") {{ write(result.toJson); close() }}
 
 
 def extract_caller_callee(source: str, func_name: str) -> Optional[CallerCalleeResult]:
-    # Joern needs the source on disk; use a temp dir that cleans itself up
     with tempfile.TemporaryDirectory() as tmp:
         src_path = os.path.join(tmp, "target.cpp")
         script_path = os.path.join(tmp, "extract.sc")
@@ -85,19 +101,18 @@ def extract_caller_callee(source: str, func_name: str) -> Optional[CallerCalleeR
 
         if not os.path.exists(out_path):
             print(f"[extract fail {func_name}] Joern produced no output")
-            print(proc.stderr[-500:])  # tail of the error, for debugging
+            print(proc.stderr[-500:])
             return None
 
         with open(out_path) as f:
             raw = json.load(f)
 
-    # Joern's toJson emits a list of single-key objects; merge into one dict
     data = {}
     if isinstance(raw, list):
         for item in raw:
             data.update(item)
     else:
-        data = raw  # already a dict (in case behaviour differs)
+        data = raw
 
     return CallerCalleeResult(
         func_name=data.get("func_name", func_name),
@@ -108,28 +123,22 @@ def extract_caller_callee(source: str, func_name: str) -> Optional[CallerCalleeR
     )
 
 
-# smoke test: fetch preg.cpp, extract preg_quote — we know the expected answer
-from pathlib import Path
-
-EXTRACT_DIR = Path("data/extracted")
-
-
 def _func_name_from_code(func: str) -> str:
-    # parse the function name out of the PrimeVul func text.
-    # e.g. "String preg_quote(const String& str, ...)" -> "preg_quote"
     before_paren = func.split("(")[0]
-    return before_paren.strip().split()[-1]
+    return before_paren.strip().split()[-1].lstrip("*")  # strip pointer '*'
 
 
 def extract_and_cache(record) -> Optional[CallerCalleeResult]:
     from vulncost.fetch import fetch_source_for_record
 
     out_path = EXTRACT_DIR / f"{record.idx}.json"
-    if out_path.exists():                       # already done -> skip (resumable)
+    if out_path.exists():
         print(f"[cached {record.idx}] already extracted")
         with open(out_path) as f:
             data = json.load(f)
-        return CallerCalleeResult(**data)
+        core = {k: data[k] for k in ("func_name", "callees", "callers",
+                                     "callee_bodies", "caller_bodies")}
+        return CallerCalleeResult(**core)
 
     fetched = fetch_source_for_record(record)
     if not fetched:
@@ -147,7 +156,8 @@ def extract_and_cache(record) -> Optional[CallerCalleeResult]:
         json.dump(asdict(result), f, indent=2)
 
     print(f"[ok {record.idx}] {func_name}: "
-          f"{len(result.callees)} callees, {len(result.callers)} callers "
+          f"{result.n_callees} callees ({result.n_callees_resolved} w/ body), "
+          f"{result.n_callers} callers ({result.n_callers_resolved} w/ body) "
           f"-> {out_path}")
     return result
 
@@ -156,8 +166,14 @@ if __name__ == "__main__":
     from vulncost.data_loader import PairedFunctionLoader
 
     loader = PairedFunctionLoader("data/primevul_valid_paired.jsonl")
-    N = 40
-    ok = fail = with_callers = 0
+    N = 200
+
+    ok = fail = 0
+    tot_callees = tot_callees_res = 0
+    tot_callers = tot_callers_res = 0
+    samples_with_callers = 0
+    samples_with_resolved_callee = 0
+
     for i, record in enumerate(loader.get_samples()):
         if i >= N:
             break
@@ -166,9 +182,33 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"[error {record.idx}] {e}")
             result = None
-        if result:
-            ok += 1
-            with_callers += 1 if result.callers else 0
-        else:
+
+        if not result:
             fail += 1
-    print(f"\n=== {ok} ok, {fail} failed, {with_callers}/{N} had callers ===")
+            continue
+        ok += 1
+        tot_callees += result.n_callees
+        tot_callees_res += result.n_callees_resolved
+        tot_callers += result.n_callers
+        tot_callers_res += result.n_callers_resolved
+        if result.n_callers:
+            samples_with_callers += 1
+        if result.n_callees_resolved:
+            samples_with_resolved_callee += 1
+
+    print("\n" + "=" * 55)
+    print("FEASIBILITY SUMMARY (intra-file caller/callee)")
+    print("=" * 55)
+    print(f"Samples attempted:            {ok + fail}")
+    print(f"  extracted ok:               {ok}")
+    print(f"  failed (fetch/parse):       {fail}")
+    print(f"Samples with >=1 caller:      {samples_with_callers}/{ok}")
+    print(f"Samples with >=1 resolved callee body: {samples_with_resolved_callee}/{ok}")
+    print(f"\nCallees: {tot_callees} total, {tot_callees_res} with bodies "
+          f"({100*tot_callees_res/max(tot_callees,1):.0f}% resolved)")
+    print(f"Callers: {tot_callers} total, {tot_callers_res} with bodies "
+          f"({100*tot_callers_res/max(tot_callers,1):.0f}% resolved)")
+    print(f"Avg callees/sample: {tot_callees/max(ok,1):.1f} "
+          f"({tot_callees_res/max(ok,1):.1f} with bodies)")
+    print(f"Avg callers/sample: {tot_callers/max(ok,1):.1f} "
+          f"({tot_callers_res/max(ok,1):.1f} with bodies)")
