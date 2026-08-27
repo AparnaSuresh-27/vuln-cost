@@ -1,0 +1,241 @@
+[cached 194999] already extracted
+[cached 219542] already extracted
+[cached 195007] already extracted
+[cached 219451] already extracted
+[cached 195020] already extracted
+[cached 219934] already extracted
+[cached 195042] already extracted
+[cached 220473] already extracted
+[cached 195057] already extracted
+[cached 220894] already extracted
+[skip 195084] None not among changed files
+[skip 195084] fetch failed
+[skip 221432] None not among changed files
+[skip 221432] fetch failed
+[cached 195217] already extracted
+[cached 222586] already extracted
+[cached 195244] already extracted
+[cached 223149] already extracted
+[cached 195247] already extracted
+[cached 223174] already extracted
+[cached 195337] already extracted
+[skip 224826] raw fetch returned 429
+[skip 224826] fetch failed
+[cached 195345] already extracted
+[cached 224922] already extracted
+[skip 195362] None not among changed files
+[skip 195362] fetch failed
+[skip 224950] None not among changed files
+[skip 224950] fetch failed
+[cached 195486] already extracted
+[cached 227282] already extracted
+[cached 195488] already extracted
+[cached 227355] already extracted
+[cached 195648] already extracted
+[cached 229853] already extracted
+[cached 195649] already extracted
+[cached 229858] already extracted
+[cached 195659] already extracted
+[cached 230086] already extracted
+[cached 195663] already extracted
+[cached 230153] already extracted
+[cached 195664] already extracted
+[cached 230182] already extracted
+[cached 195679] already extracted
+[cached 230580] already extracted
+[cached 195680] already extracted
+[cached 230603] already extracted
+[cached 195697] already extracted
+[cached 231074] already extracted
+[cached 195717] already extracted
+[cached 231582] already extracted
+[cached 195719] already extracted
+[cached 231612] already extracted
+[skip 195727] commit API returned 301
+[skip 195727] fetch failed
+[skip 232153] commit API returned 301
+[skip 232153] fetch failed
+[cached 195747] already extracted
+[cached 232376] already extracted
+[cached 195754] already extracted
+[cached 232648] already extracted
+[cached 195755] already extracted
+[cached 232661] already extracted
+[cached 195776] already extracted
+[cached 232979] already extracted
+[cached 195778] already extracted
+[cached 233116] already extracted
+[cached 195820] already extracted
+[cached 234082] already extracted
+[cached 195958] already extracted
+[cached 235720] already extracted
+[cached 195966] already extracted
+[cached 235766] already extracted
+[cached 195972] already extracted
+[cached 235840] already extracted
+[cached 195985] already extracted
+[cached 236225] already extracted
+[cached 195986] already extracted
+[cached 236238] already extracted
+[cached 196318] already extracted
+[cached 238366] already extracted
+[skip 196327] None not among changed files
+[skip 196327] fetch failed
+[skip 238757] None not among changed files
+[skip 238757] fetch failed
+[cached 196329] already extracted
+[cached 238838] already extracted
+[cached 196330] already extracted
+[cached 238855] already extracted
+[cached 196589] already extracted
+[cached 240791] already extracted
+[cached 196601] already extracted
+[cached 240829] already extracted
+[cached 196610] already extracted
+[cached 241036] already extracted
+[cached 196624] already extracted
+[cached 241321] already extracted
+[skip 196632] None not among changed files
+[skip 196632] fetch failed
+[skip 241532] None not among changed files
+[skip 241532] fetch failed
+[cached 196672] already extracted
+[cached 242168] already extracted
+[cached 196673] already extracted
+[cached 242186] already extracted
+[cached 196719] already extracted
+[cached 243213] already extracted
+[cached 196739] already extracted
+[cached 243619] already extracted
+[cached 196763] already extracted
+[cached 243980] already extracted
+[skip 196766] None not among changed files
+[skip 196766] fetch failed
+[skip 244385] None not among changed files
+[skip 244385] fetch failed
+[cached 196768] already extracted
+[cached 244426] already extracted
+[cached 196781] already extracted
+[cached 244730] already extracted
+[cached 196791] already extracted
+[cached 245150] already extracted
+[cached 196800] already extracted
+[cached 245427] already extracted
+[cached 196802] already extracted
+[cached 245438] already extracted
+[skip 196811] None not among changed files
+[skip 196811] fetch failed
+[skip 245642] None not among changed files
+[skip 245642] fetch failed
+[cached 196831] already extracted
+[cached 246050] already extracted
+[cached 196843] already extracted
+[cached 246422] already extracted
+[cached 196856] already extracted
+[cached 246589] already extracted
+[cached 196857] already extracted
+[cached 246590] already extracted
+[cached 196858] already extracted
+[cached 246616] already extracted
+[cached 196884] already extracted
+[cached 247279] already extracted
+[cached 196921] already extracted
+[cached 248336] already extracted
+[cached 196935] already extracted
+[cached 248727] already extracted
+[cached 196939] already extracted
+[cached 248772] already extracted
+[cached 196991] already extracted
+[cached 249484] already extracted
+[cached 196997] already extracted
+[cached 249539] already extracted
+[skip 197084] None not among changed files
+[skip 197084] fetch failed
+[skip 251872] None not among changed files
+[skip 251872] fetch failed
+[cached 197114] already extracted
+[cached 252505] already extracted
+[cached 197133] already extracted
+[cached 253652] already extracted
+[cached 197172] already extracted
+[cached 254699] already extracted
+[cached 197178] already extracted
+[cached 254869] already extracted
+[cached 197183] already extracted
+[cached 255022] already extracted
+[skip 197202] None not among changed files
+[skip 197202] fetch failed
+[skip 255181] None not among changed files
+[skip 255181] fetch failed
+[skip 197204] None not among changed files
+[skip 197204] fetch failed
+[skip 255326] None not among changed files
+[skip 255326] fetch failed
+[cached 197240] already extracted
+[cached 255791] already extracted
+[cached 197260] already extracted
+[cached 256099] already extracted
+[cached 197301] already extracted
+[cached 256387] already extracted
+[cached 197303] already extracted
+[cached 256405] already extracted
+[cached 197404] already extracted
+[cached 258254] already extracted
+[skip 197415] None not among changed files
+[skip 197415] fetch failed
+[skip 258435] None not among changed files
+[skip 258435] fetch failed
+[cached 197417] already extracted
+[cached 258460] already extracted
+[cached 197433] already extracted
+[cached 258553] already extracted
+[cached 197465] already extracted
+[cached 259078] already extracted
+[cached 197476] already extracted
+[cached 259369] already extracted
+[cached 197512] already extracted
+[cached 259623] already extracted
+[skip 197575] None not among changed files
+[skip 197575] fetch failed
+[skip 261456] None not among changed files
+[skip 261456] fetch failed
+[cached 197649] already extracted
+[cached 262651] already extracted
+[cached 197652] already extracted
+[cached 262684] already extracted
+[cached 197664] already extracted
+[cached 262711] already extracted
+[cached 197715] already extracted
+[cached 262772] already extracted
+[cached 197721] already extracted
+[cached 262864] already extracted
+[cached 197747] already extracted
+[cached 263377] already extracted
+[cached 197757] already extracted
+[cached 263436] already extracted
+[cached 197761] already extracted
+[cached 263524] already extracted
+[cached 197806] already extracted
+[cached 264414] already extracted
+[cached 197832] already extracted
+[cached 264754] already extracted
+[cached 197848] already extracted
+[cached 265040] already extracted
+[skip 197890] None not among changed files
+[skip 197890] fetch failed
+[skip 265416] None not among changed files
+[skip 265416] fetch failed
+
+=======================================================
+FEASIBILITY SUMMARY (intra-file caller/callee)
+=======================================================
+Samples attempted:            200
+  extracted ok:               173
+  failed (fetch/parse):       27
+Samples with >=1 caller:      68/173
+Samples with >=1 resolved callee body: 71/173
+
+Callees: 2500 total, 361 with bodies (14% resolved)
+Callers: 114 total, 110 with bodies (96% resolved)
+Avg callees/sample: 14.5 (2.1 with bodies)
+Avg callers/sample: 0.7 (0.6 with bodies)
