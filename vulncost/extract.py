@@ -156,7 +156,19 @@ if __name__ == "__main__":
     from vulncost.data_loader import PairedFunctionLoader
 
     loader = PairedFunctionLoader("data/primevul_valid_paired.jsonl")
+    N = 40
+    ok = fail = with_callers = 0
     for i, record in enumerate(loader.get_samples()):
-        if i >= 3:                              # first 3 records only for now
+        if i >= N:
             break
-        extract_and_cache(record)
+        try:
+            result = extract_and_cache(record)
+        except Exception as e:
+            print(f"[error {record.idx}] {e}")
+            result = None
+        if result:
+            ok += 1
+            with_callers += 1 if result.callers else 0
+        else:
+            fail += 1
+    print(f"\n=== {ok} ok, {fail} failed, {with_callers}/{N} had callers ===")
