@@ -4,18 +4,15 @@ QLoRA fine-tune of Qwen2.5-Coder-7B for function-level vulnerability detection
 on PrimeVul train. Produces a LoRA adapter used as the FIXED detector across the
 whole context ladder. Fits on one A10G (24 GB).
 
-Recipe follows standard VD LoRA setups (rank 16, ~2 epochs, oversample the
-vulnerable class). The PROMPT below MUST be reused verbatim in every rung runner
-(function-only, slice, full-file, explanation) so the model always sees the format
-it was trained on -- the rungs differ only in what goes in {code}.
+The PROMPT below MUST be reused verbatim in every rung runner (function-only,
+slice, full-file, explanation) so the model always sees the format it was trained
+on -- the rungs differ only in what goes in {code}.
 
-Run on g5.xlarge (1x A10G):
-    pip install unsloth
-    export HF_HOME=/dev/shm/hf          # if disk is tight; else omit
-    python finetune_vd.py --train data/primevul_train.jsonl
-
-NOTE: unsloth / trl APIs drift between versions. If SFTConfig/SFTTrainer args
-error, paste the traceback -- it's usually a one-line arg rename, not a real problem.
+Run (venv active, HF_HOME set):
+    # smoke test  (a few steps, proves the path)
+    python3 finetune_vd.py --train data/primevul_train.jsonl --epochs 0.01 --oversample 1
+    # real capped run  (~59k examples, a few hours)
+    python3 finetune_vd.py --train data/primevul_train.jsonl --epochs 2 --oversample 5 --max-safe 35000
 """
 import argparse
 import json
@@ -29,7 +26,7 @@ PROMPT = """You are a security analyst. Analyze the following C/C++ code for sec
 Is this code VULNERABLE or SAFE? Answer with exactly one word: VULNERABLE or SAFE."""
 
 
-def load_primevul(path, oversample_vuln):
+def load_primevul(path, oversample_vuln, max_safe=None):
     vuln, safe = [], []
     for line in open(path):
         line = line.strip()
@@ -45,9 +42,13 @@ def load_primevul(path, oversample_vuln):
         ex = {"code": func, "label": "VULNERABLE" if int(tgt) == 1 else "SAFE"}
         (vuln if int(tgt) == 1 else safe).append(ex)
     print(f"raw: {len(vuln)} vulnerable, {len(safe)} safe")
-    data = safe + vuln * oversample_vuln          # push minority class toward balance
     random.seed(0)
+    if max_safe and len(safe) > max_safe:          # cap the majority class
+        safe = random.sample(safe, max_safe)
+        print(f"capped safe to {len(safe)}")
+    data = safe + vuln * oversample_vuln           # push minority toward balance
     random.shuffle(data)
+    print(f"training examples (after oversampling): {len(data)}")
     return data
 
 
@@ -56,7 +57,8 @@ def main():
     ap.add_argument("--train", default="data/primevul_train.jsonl")
     ap.add_argument("--epochs", type=float, default=2)
     ap.add_argument("--maxlen", type=int, default=4096)
-    ap.add_argument("--oversample", type=int, default=10)
+    ap.add_argument("--oversample", type=int, default=5)
+    ap.add_argument("--max-safe", type=int, default=None)
     ap.add_argument("--out", default="qwen-coder-7b-vd-lora")
     args = ap.parse_args()
 
@@ -76,8 +78,7 @@ def main():
         use_gradient_checkpointing="unsloth",
     )
 
-    raw = load_primevul(args.train, args.oversample)
-    print(f"training examples (after oversampling): {len(raw)}")
+    raw = load_primevul(args.train, args.oversample, args.max_safe)
 
     def to_text(ex):
         msgs = [
