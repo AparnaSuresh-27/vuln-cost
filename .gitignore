@@ -7,3 +7,5 @@ __pycache__/
 *.pyc
 .env
 workspace/
+qwen-coder-7b-vd-lora/
+unsloth_compiled_cache/
