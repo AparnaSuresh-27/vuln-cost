@@ -70,7 +70,7 @@ def main():
 
     from unsloth import FastLanguageModel
     model, tokenizer = FastLanguageModel.from_pretrained(
-        args.adapter, max_seq_length=4096, load_in_4bit=True)
+        args.adapter, max_seq_length=8192, load_in_4bit=True)
     FastLanguageModel.for_inference(model)
 
     rows = load(args.test, args.limit)
