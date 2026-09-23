@@ -8,6 +8,9 @@ Runs on the RACE GPU box, from the repo root.
     nohup python -m vulncost.runner_jitvul_ft --label jitvul_ft_full > logs/jitvul_ft_full.out 2>&1 &
     # untrained control through the identical pipeline and prompt
     nohup python -m vulncost.runner_jitvul_ft --adapter base --label jitvul_base_full > logs/jitvul_base_full.out 2>&1 &
+    # placebo: the caller/callee LAYOUT with the context removed, every pair.
+    # Separates the effect of the prompt format from the effect of the context.
+    nohup python -m vulncost.runner_jitvul_ft --placebo --label jitvul_ft_placebo > logs/jitvul_ft_placebo.out 2>&1 &
 
 Writes logs/<timestamp>_<label>/calls.jsonl (one row per inference, flushed
 as it goes) and run_meta.json (what produced it). Analyse with full_metrics.
@@ -62,6 +65,7 @@ def write_meta(run_dir, args, model_path, model_name, n_pairs):
         "data_path": args.data,
         "data_sha256": sha256(args.data),
         "loader": "JitVulLoader(clean=True, dedupe=True)",
+        "placebo": args.placebo,
         "pairs_requested": args.pairs or "all",
         "pairs_available": n_pairs,
         "git_commit": git("rev-parse", "HEAD"),
@@ -82,7 +86,10 @@ def main():
     ap.add_argument("--pairs", type=int, default=0, help="0 = all pairs")
     ap.add_argument("--max-seq", type=int, default=16384)
     ap.add_argument("--label", default="jitvul_ft")
+    ap.add_argument("--placebo", action="store_true",
+                    help="run only the caller/callee rung with all context removed")
     args = ap.parse_args()
+    rungs = (ContextConfig.plus_caller_callee,) if args.placebo else RUNGS
 
     if args.adapter == "base":
         model_path, model_name = BASE_MODEL, "qwen2.5-coder-7b-instruct-4bit"
@@ -103,12 +110,15 @@ def main():
     logger = RunLogger("logs", args.label)
     run_dir = os.path.dirname(str(logger.path))
     write_meta(run_dir, args, model_path, model_name, n_pairs)
-    print(f"run {logger.run_id}: {n_pairs} pairs, {len(samples) * len(RUNGS)} inferences")
+    print(f"run {logger.run_id}: {n_pairs} pairs, {len(samples) * len(rungs)} inferences"
+          + ("  [PLACEBO: context removed]" if args.placebo else ""))
 
     t_start = time.time()
     for i, (sample, extracted) in enumerate(samples):
         line = []
-        for cfg in RUNGS:
+        if args.placebo:
+            extracted = {"callers": [], "callees": []}
+        for cfg in rungs:
             prompt = build_ft_prompt(cfg, sample.func, extracted)
             t0 = time.time()
             response, in_tok, out_tok, status = engine.run(prompt)

@@ -62,7 +62,7 @@ def main():
                     ("vuln body in split", hit_vuln),
                     ("patched body in split", hit_safe),
                     ("FLAGGED (any of the above)", flagged),
-                    ("same CVE (not flagged)", hit_cve)]:
+                    ("same CVE (reported only)", hit_cve)]:
         print(f"  {name:<28}{len(s):>5}  ({len(s) / total:.1%})")
 
     os.makedirs("results", exist_ok=True)
