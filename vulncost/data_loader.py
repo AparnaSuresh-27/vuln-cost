@@ -1,5 +1,6 @@
 from dataclasses import dataclass, fields
 import json
+import re
 from typing import Dict, Iterator, Optional
 
 
@@ -52,8 +53,15 @@ class JitVulLoader:
     for pairwise metrics. `extracted` is shaped like data/extracted/{idx}.json
     so CallerCalleePromptBuilder works unchanged.
     """
-    def __init__(self, data_path):
+    # 875/879 non-vulnerable bodies start with a stray language tag ("c\n" or
+    # "cpp\n", left over from stripped markdown fences); vulnerable bodies never
+    # do. Left in, the first token alone separates the two halves of a pair.
+    _LANG_TAG = re.compile(r"^(?:cpp|c)\n")
+
+    def __init__(self, data_path, clean=False, dedupe=False):
         self.data_path = data_path
+        self.clean = clean    # strip the language-tag artifact from function bodies
+        self.dedupe = dedupe  # keep the first record per idx (79 records repeat an idx)
 
     @staticmethod
     def _neighbours(graph):
@@ -82,9 +90,10 @@ class JitVulLoader:
         caller_names -= targets
         callee_names -= targets
 
-        # keep only names with real bodies in this record's body map
-        caller_names = [n for n in caller_names if bodies.get(n)]
-        callee_names = [n for n in callee_names if bodies.get(n)]
+        # keep only names with real bodies; sorted so prompts are identical across
+        # runs (set order depends on PYTHONHASHSEED, which changes every process)
+        caller_names = sorted(n for n in caller_names if bodies.get(n))
+        callee_names = sorted(n for n in callee_names if bodies.get(n))
 
         return {
             "callers": caller_names,
@@ -117,13 +126,22 @@ class JitVulLoader:
             nvd_url=record.get("nvd_url"),
         )
 
+    def _body(self, record, key):
+        body = record.get(key, "") or ""
+        return self._LANG_TAG.sub("", body) if self.clean else body
+
     def get_samples(self):
+        seen = set()
         with open(self.data_path) as f:
             for line in f:
                 if not line.strip():
                     continue
                 r = json.loads(line)
-                yield (self._make_pf(r, 1, r.get("vulnerable_function_body", "") or ""),
+                if self.dedupe:
+                    if r.get("idx") in seen:
+                        continue
+                    seen.add(r.get("idx"))
+                yield (self._make_pf(r, 1, self._body(r, "vulnerable_function_body")),
                        self._extracted_from(r, "vulnerable"))
-                yield (self._make_pf(r, 0, r.get("non_vulnerable_function_body", "") or ""),
+                yield (self._make_pf(r, 0, self._body(r, "non_vulnerable_function_body")),
                        self._extracted_from(r, "non_vulnerable"))
