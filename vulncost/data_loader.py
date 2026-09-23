@@ -1,6 +1,7 @@
 from dataclasses import dataclass, fields
 import json
 import re
+import textwrap
 from typing import Dict, Iterator, Optional
 
 
@@ -58,10 +59,26 @@ class JitVulLoader:
     # do. Left in, the first token alone separates the two halves of a pair.
     _LANG_TAG = re.compile(r"^(?:cpp|c)\n")
 
-    def __init__(self, data_path, clean=False, dedupe=False):
+    def __init__(self, data_path, clean=False, dedupe=False, normalize_ws=False):
         self.data_path = data_path
         self.clean = clean    # strip the language-tag artifact from function bodies
         self.dedupe = dedupe  # keep the first record per idx (79 records repeat an idx)
+        # The two halves are also formatted differently: 98% of patched bodies end
+        # in a newline vs 51% of vulnerable ones, and trailing spaces on lines occur
+        # in 345 vulnerable vs 106 patched bodies. normalize_ws puts every body
+        # (target and context) into one canonical layout so formatting carries no
+        # label information.
+        self.normalize_ws = normalize_ws
+
+    @staticmethod
+    def normalize(text):
+        text = text.replace("\r\n", "\n").replace("\r", "\n")
+        lines = [l.rstrip() for l in text.split("\n")]   # no trailing spaces
+        while lines and not lines[0]:
+            lines.pop(0)                                   # no leading blank lines
+        while lines and not lines[-1]:
+            lines.pop()                                    # no trailing newline
+        return textwrap.dedent("\n".join(lines)).lstrip()  # no stray indentation
 
     @staticmethod
     def _neighbours(graph):
@@ -77,7 +94,7 @@ class JitVulLoader:
         return names
 
     @classmethod
-    def _extracted_from(cls, record, prefix):
+    def _extracted_from(cls, record, prefix, normalize=False):
         caller_graph = record.get(f"{prefix}_caller_graph", {}) or {}
         callee_graph = record.get(f"{prefix}_callee_graph", {}) or {}
         bodies = record.get(f"{prefix}_function_bodies", {}) or {}
@@ -94,6 +111,9 @@ class JitVulLoader:
         # runs (set order depends on PYTHONHASHSEED, which changes every process)
         caller_names = sorted(n for n in caller_names if bodies.get(n))
         callee_names = sorted(n for n in callee_names if bodies.get(n))
+
+        if normalize:
+            bodies = {n: cls.normalize(b) for n, b in bodies.items() if b}
 
         return {
             "callers": caller_names,
@@ -128,7 +148,11 @@ class JitVulLoader:
 
     def _body(self, record, key):
         body = record.get(key, "") or ""
-        return self._LANG_TAG.sub("", body) if self.clean else body
+        if self.clean:
+            body = self._LANG_TAG.sub("", body)
+        if self.normalize_ws:
+            body = self.normalize(body)
+        return body
 
     def get_samples(self):
         seen = set()
@@ -142,6 +166,6 @@ class JitVulLoader:
                         continue
                     seen.add(r.get("idx"))
                 yield (self._make_pf(r, 1, self._body(r, "vulnerable_function_body")),
-                       self._extracted_from(r, "vulnerable"))
+                       self._extracted_from(r, "vulnerable", self.normalize_ws))
                 yield (self._make_pf(r, 0, self._body(r, "non_vulnerable_function_body")),
-                       self._extracted_from(r, "non_vulnerable"))
+                       self._extracted_from(r, "non_vulnerable", self.normalize_ws))
