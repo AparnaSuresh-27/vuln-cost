@@ -1,0 +1,7 @@
+function-only: share predicted VULNERABLE, by true label and trailing newline
+  truth=VULN  ends_with_newline=True   407/409 = 1.00
+  truth=VULN  ends_with_newline=False  348/389 = 0.89
+  truth=SAFE  ends_with_newline=True   169/785 = 0.22
+  truth=SAFE  ends_with_newline=False  12/15 = 0.80
+
+code-identical pairs: 146; given DIFFERENT answers: 85

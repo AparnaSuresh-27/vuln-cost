@@ -1,0 +1,16 @@
+pairs common to all conditions: 162
+
+condition            P-C     P-V     P-B     P-R  tok/sample
+ft_fo         0.006 (  1)   0.840   0.130   0.025        1706
+ft_cc         0.025 (  4)   0.784   0.154   0.037        2288
+ft_placebo    0.012 (  2)   0.778   0.179   0.031        1721
+base_fo       0.049 (  8)   0.481   0.426   0.043        1706
+base_cc       0.037 (  6)   0.537   0.395   0.031        2288
+
+comparison                    A           B            A only B only       p
+context, fine-tuned (total)   ft_fo       ft_cc             0      3   0.250
+layout only, fine-tuned       ft_fo       ft_placebo        0      1   1.000
+context itself, fine-tuned    ft_placebo  ft_cc             0      2   0.500
+context, base model           base_fo     base_cc           5      3   0.727
+fine-tuning, function-only    base_fo     ft_fo             7      0   0.016
+fine-tuning, caller/callee    base_cc     ft_cc             4      2   0.688

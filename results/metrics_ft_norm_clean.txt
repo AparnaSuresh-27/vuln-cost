@@ -1,0 +1,38 @@
+Loaded 3200 records from logs/20260924_030427_jitvul_ft_norm/calls.jsonl
+sample_ids logged 800 | scored 162 | dropped: failed 21, incomplete/duplicate 0, excluded 617
+
+=======================================================
+function_only  (n=324, 162 pairs)
+=======================================================
+  Accuracy 0.491  Precision 0.495  Recall 0.846  F1 0.624
+  Confusion: TP=137 FP=140 TN=22 FN=25  (UNKNOWN answers: 0)
+  Pairwise:
+    P-C both correct         : 0.006 (1/162)
+    P-V both -> VULNERABLE   : 0.840 (136/162)
+    P-B both -> SAFE         : 0.130 (21/162)
+    P-R reversed             : 0.025 (4/162)
+  Tokens: input 552889 (1706/sample), output 1479 (4.6/sample)
+
+=======================================================
+plus_caller_callee  (n=324, 162 pairs)
+=======================================================
+  Accuracy 0.494  Precision 0.496  Recall 0.809  F1 0.615
+  Confusion: TP=131 FP=133 TN=29 FN=31  (UNKNOWN answers: 0)
+  Pairwise:
+    P-C both correct         : 0.025 (4/162)
+    P-V both -> VULNERABLE   : 0.784 (127/162)
+    P-B both -> SAFE         : 0.154 (25/162)
+    P-R reversed             : 0.037 (6/162)
+  Tokens: input 741250 (2288/sample), output 1440 (4.4/sample)
+
+TOKEN COST RATIO (caller_callee / function_only): 1.34x
+
+Pair subsets (of 162 scored):
+  identical target function in both halves: 47 -> function-only P-C ceiling 0.710
+  no caller/callee context in either half : 95
+
+subset                         pairs   fo P-C   cc P-C  cc/fo tok
+all                              162    0.006    0.025      1.34x
+distinguishable targets          115    0.009    0.035      1.40x
+has context                       67    0.015    0.045      2.13x
+identical targets                 47    0.000    0.000      1.25x

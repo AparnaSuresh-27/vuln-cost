@@ -1,0 +1,14 @@
+Loaded 1600 records from logs/20260924_034453_jitvul_ft_norm_placebo/calls.jsonl
+sample_ids logged 800 | scored 798 | dropped: failed 2, incomplete/duplicate 0, excluded 0
+
+=======================================================
+plus_caller_callee  (n=1596, 798 pairs)
+=======================================================
+  Accuracy 0.523  Precision 0.513  Recall 0.888  F1 0.651
+  Confusion: TP=709 FP=672 TN=126 FN=89  (UNKNOWN answers: 0)
+  Pairwise:
+    P-C both correct         : 0.063 (50/798)
+    P-V both -> VULNERABLE   : 0.826 (659/798)
+    P-B both -> SAFE         : 0.095 (76/798)
+    P-R reversed             : 0.016 (13/798)
+  Tokens: input 2569546 (1610/sample), output 7335 (4.6/sample)
