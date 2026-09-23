@@ -64,7 +64,7 @@ def write_meta(run_dir, args, model_path, model_name, n_pairs):
         "prompt_template_sha256": hashlib.sha256(FT_TEMPLATE.encode()).hexdigest(),
         "data_path": args.data,
         "data_sha256": sha256(args.data),
-        "loader": "JitVulLoader(clean=True, dedupe=True)",
+        "loader": "JitVulLoader(clean=True, dedupe=True, normalize_ws=True)",
         "placebo": args.placebo,
         "pairs_requested": args.pairs or "all",
         "pairs_available": n_pairs,
@@ -99,7 +99,7 @@ def main():
             raise SystemExit(f"no adapter_config.json in {model_path}")
         model_name = "qwen2.5-coder-7b-instruct-4bit+" + os.path.basename(model_path.rstrip("/"))
 
-    loader = JitVulLoader(args.data, clean=True, dedupe=True)
+    loader = JitVulLoader(args.data, clean=True, dedupe=True, normalize_ws=True)
     samples = list(loader.get_samples())  # small; lets us print an ETA
     n_pairs = len(samples) // 2
     if args.pairs:
