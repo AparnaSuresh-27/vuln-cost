@@ -2,7 +2,6 @@ data/
 .DS_Store
 logs/
 .venv/
-test_scripts/
 __pycache__/
 *.pyc
 .env
