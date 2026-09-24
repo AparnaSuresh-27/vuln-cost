@@ -1,0 +1,6 @@
+training set rebuilt: {"raw": 175797, "dropped_cve": 18816, "dropped_body": 9, "vuln": 4112, "paired_safe": 3229, "random_safe": 12000, "total": 27565}
+distinct (project, function name) in training: 14637
+
+function-only P-C by whether the same function (project + name) is in training:
+  SEEN in training      7/87   = 0.080
+  not seen            153/711  = 0.215
