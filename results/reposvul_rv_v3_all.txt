@@ -1,0 +1,17 @@
+call status by level: {'function': {'ok': 119}, 'slice': {'ok': 119}, 'full': {'ok': 111, 'too_long': 8}}
+samples: 119 logged, 0 excluded, 111 complete cases across ['function', 'slice', 'full']
+
+level        n       bal_acc [95% CI]            F1 [95% CI]  recall  %predV  tp fp tn fn
+function   111  0.455 [0.363,0.550]      0.496 [0.374,0.600]      0.566  0.613  30 38 20 23
+slice      111  0.500 [0.405,0.594]      0.533 [0.411,0.632]      0.604  0.604  32 35 23 21
+full       111  0.551 [0.465,0.633]      0.617 [0.513,0.704]      0.774  0.721  41 39 19 12
+
+McNemar (exact) on per-sample correctness:
+  function vs slice: right only in function=9, only in slice=14, p=0.4049
+  function vs full: right only in function=14, only in full=24, p=0.1433
+  slice vs full: right only in slice=18, only in full=23, p=0.5327
+
+Cost per call (input tokens; ratio vs function-only with 95% CI):
+  function  mean     1001  median     768  ratio  1.00x [1.00,1.00]  GPU   0.48s/call
+  slice     mean      641  median     405  ratio  0.64x [0.55,0.74]  GPU   0.39s/call
+  full      mean     5868  median    4446  ratio  5.86x [5.12,6.74]  GPU   1.77s/call
