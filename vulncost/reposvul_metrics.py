@@ -88,8 +88,8 @@ def main():
     status = defaultdict(lambda: defaultdict(int))
     for v in by.values():
         for l, r in v.items():
-            status[l][r["status"] if r["prediction"] not in (None, "UNPARSED") else
-                      (r["status"] if r["status"] != "ok" else "unparsed")] += 1
+            ok = r["prediction"] in ("VULNERABLE", "SAFE")
+            status[l]["ok" if ok else (r["status"] if r["status"] != "ok" else "unknown")] += 1
     print("call status by level:", {l: dict(s) for l, s in status.items()})
 
     ids = sorted(i for i, v in by.items()

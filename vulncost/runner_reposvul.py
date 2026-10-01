@@ -1,73 +1,79 @@
 """
-Run the fixed detector over the ReposVul ladder: function-only -> CPG slice -> full file.
+ReposVul context ladder with the SAME fixed detector and inference path as the
+JITVul runs: function-only -> CPG slice -> full file.
 
-Every level uses the SAME prompt template as training (PROMPT from finetune_vd.py) and
-the same whitespace normalisation as the JITVul runs; only what goes into {code} changes.
+Uses HFInference / parse_prediction / MAX_NEW_TOKENS from hf_inference.py and the
+PROMPT from finetune_vd.py unchanged, and normalises every input with
+JitVulLoader.normalize, so the only thing that differs from JITVul is the data.
 
-    # smoke test: 3 samples, all levels
-    python3 -m vulncost.runner_reposvul --adapter qwen-coder-7b-vd-lora-v3 --limit 3 --label rv_smoke
-    # full runs
-    python3 -m vulncost.runner_reposvul --adapter qwen-coder-7b-vd-lora-v3 --label rv_v3
-    python3 -m vulncost.runner_reposvul --adapter base --label rv_base
+    # smoke test: 3 samples x 3 levels = 9 inferences
+    python -m vulncost.runner_reposvul --adapter <v3 adapter dir> --limit 3 --label rv_smoke
+    # full runs (119 samples x 3 levels = 357 inferences each)
+    nohup python -m vulncost.runner_reposvul --adapter <v3 adapter dir> --label rv_v3 > logs/rv_v3.out 2>&1 &
+    nohup python -m vulncost.runner_reposvul --adapter base --label rv_base > logs/rv_base.out 2>&1 &
 
-Output: logs/<timestamp>_<label>/calls.jsonl, one row per (sample, level).
-Use --resume <run_dir> to continue an interrupted run without redoing finished calls.
+Writes logs/<timestamp>_<label>/calls.jsonl (one row per inference, flushed as it
+goes) and run_meta.json. Analyse with vulncost.reposvul_metrics.
+--resume <run_dir> continues an interrupted run without redoing finished calls.
 """
 import argparse
+import hashlib
 import json
 import os
+import platform
+import subprocess
 import time
 from datetime import datetime
 
-from finetune_vd import PROMPT
+from finetune_vd import PROMPT as FT_TEMPLATE
+from vulncost.data_loader import JitVulLoader
+from vulncost.hf_inference import HFInference, parse_prediction, MAX_NEW_TOKENS
 
 BASE_MODEL = "unsloth/Qwen2.5-Coder-7B-Instruct-bnb-4bit"
 LEVELS = ["function", "slice", "full"]
+TAGS = {"function": "fn", "slice": "sl", "full": "file"}
+SOURCE = "data/reposvul_test.json"
 
 
-def get_normalizer():
-    """Use the exact normaliser from the JITVul pipeline so inputs match training."""
+def sha256(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def git(*args):
     try:
-        from vulncost.data_loader import JitVulLoader
-        print("normalisation: JitVulLoader.normalize")
-        return JitVulLoader.normalize
-    except Exception as e:  # noqa: BLE001
-        raise SystemExit(f"Could not import JitVulLoader.normalize ({e}). "
-                         "Fix the import rather than running un-normalised inputs.")
-
-
-def parse_prediction(text: str) -> str:
-    t = text.strip().upper()
-    if t.startswith("VULNERABLE"):
-        return "VULNERABLE"
-    if t.startswith("SAFE"):
-        return "SAFE"
-    if "VULNERABLE" in t:
-        return "VULNERABLE"
-    if "SAFE" in t:
-        return "SAFE"
-    return "UNPARSED"
+        return subprocess.check_output(["git", *args], text=True, stderr=subprocess.DEVNULL).strip()
+    except Exception:
+        return None
 
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--adapter", required=True,
+                    help="LoRA adapter dir, or 'base' for the untrained control")
     ap.add_argument("--data", default="data/reposvul_ladder.jsonl")
-    ap.add_argument("--adapter", required=True, help="adapter dir, or 'base' for the untrained model")
     ap.add_argument("--levels", default=",".join(LEVELS))
-    ap.add_argument("--max-input-tokens", type=int, default=16384,
-                    help="skip prompts longer than this (same cap as the JITVul runs)")
-    ap.add_argument("--limit", type=int, default=None)
+    ap.add_argument("--max-seq", type=int, default=16384, help="same cap as the JITVul runs")
+    ap.add_argument("--limit", type=int, default=0, help="0 = all samples")
     ap.add_argument("--label", default="reposvul")
-    ap.add_argument("--resume", default=None, help="existing run dir to append to")
+    ap.add_argument("--resume", default=None, help="existing run dir to continue")
     args = ap.parse_args()
-
-    import torch
-    from unsloth import FastLanguageModel
-
     levels = args.levels.split(",")
+
+    if args.adapter == "base":
+        model_path, model_name = BASE_MODEL, "qwen2.5-coder-7b-instruct-4bit"
+    else:
+        model_path = os.path.expanduser(args.adapter)
+        if not os.path.isfile(os.path.join(model_path, "adapter_config.json")):
+            raise SystemExit(f"no adapter_config.json in {model_path}")
+        model_name = "qwen2.5-coder-7b-instruct-4bit+" + os.path.basename(model_path.rstrip("/"))
+
     rows = [json.loads(l) for l in open(args.data) if l.strip()]
     if args.limit:
-        # take vulnerable and safe samples alternately so a smoke test sees both labels
+        # alternate vulnerable / safe so a smoke test sees both labels
         v = [r for r in rows if r["label"] == 1]
         s = [r for r in rows if r["label"] == 0]
         rows = [x for pair in zip(v, s) for x in pair][:args.limit]
@@ -84,58 +90,67 @@ def main():
             if l.strip():
                 d = json.loads(l)
                 done.add((d["idx"], d["context_config"]))
-    print(f"run dir: {run_dir}  ({len(done)} calls already done)")
 
-    model_name = BASE_MODEL if args.adapter == "base" else args.adapter
-    model, tok = FastLanguageModel.from_pretrained(
-        model_name=model_name, max_seq_length=args.max_input_tokens + 64, load_in_4bit=True)
-    FastLanguageModel.for_inference(model)
-    normalize = get_normalizer()
+    engine = HFInference(model_path, args.max_seq)
+
+    import torch
+    meta = {
+        "started": datetime.now().isoformat(),
+        "model_name": model_name, "model_path": model_path,
+        "max_seq_length": args.max_seq, "max_new_tokens": MAX_NEW_TOKENS,
+        "decoding": "greedy (do_sample=False)",
+        "prompt_template_sha256": hashlib.sha256(FT_TEMPLATE.encode()).hexdigest(),
+        "normalisation": "JitVulLoader.normalize on every input",
+        "levels": levels,
+        "data_path": args.data, "data_sha256": sha256(args.data),
+        "source_path": SOURCE,
+        "source_sha256": sha256(SOURCE) if os.path.exists(SOURCE) else None,
+        "source_origin": "github.com/qcri/llmxcpg data/reposvul_test.json @ fd7af0d",
+        "samples": len(rows), "resumed_calls": len(done),
+        "git_commit": git("rev-parse", "HEAD"),
+        "git_dirty": bool(git("status", "--porcelain")),
+        "gpu": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
+        "torch": torch.__version__, "host": platform.node(),
+    }
+    meta_name = "run_meta.json" if not args.resume else f"run_meta_resume_{datetime.now():%H%M%S}.json"
+    with open(os.path.join(run_dir, meta_name), "w") as f:
+        json.dump(meta, f, indent=2)
 
     total = len(rows) * len(levels)
-    n_done, t0 = len(done), time.time()
+    print(f"run {run_dir}: {len(rows)} samples x {len(levels)} levels = {total} inferences "
+          f"({len(done)} already done)")
+
+    t_start, n_new = time.time(), 0
+    todo = total - len(done)
     with open(out_path, "a") as f:
-        for r in rows:                      # all levels of a sample together -> complete cases
+        for i, r in enumerate(rows):            # all levels of a sample together
+            line = []
             for lvl in levels:
                 if (r["idx"], lvl) in done:
                     continue
-                code = normalize(r[lvl])
-                msgs = [{"role": "user", "content": PROMPT.format(code=code)}]
-                ids = tok.apply_chat_template(msgs, add_generation_prompt=True,
-                                              return_tensors="pt")
-                n_in = ids.shape[-1]
-                rec = {"idx": r["idx"], "label": r["label"], "context_config": lvl,
-                       "adapter": args.adapter, "input_tokens": n_in, "output_tokens": 0,
-                       "latency_s": None, "raw_output": "", "prediction": None,
-                       "status": "ok", "cwe": r.get("cwe"), "project": r.get("project")}
-                if n_in > args.max_input_tokens:
-                    rec["status"] = "too_long"
-                else:
-                    try:
-                        ids = ids.to(model.device)
-                        torch.cuda.synchronize()
-                        ts = time.time()
-                        with torch.no_grad():
-                            gen = model.generate(input_ids=ids, attention_mask=torch.ones_like(ids),
-                                                 max_new_tokens=8, do_sample=False,
-                                                 pad_token_id=tok.eos_token_id)
-                        torch.cuda.synchronize()
-                        rec["latency_s"] = round(time.time() - ts, 3)
-                        new = gen[0, n_in:]
-                        rec["output_tokens"] = int(new.shape[-1])
-                        rec["raw_output"] = tok.decode(new, skip_special_tokens=True)
-                        rec["prediction"] = parse_prediction(rec["raw_output"])
-                    except torch.cuda.OutOfMemoryError:
-                        rec["status"] = "oom"
-                        torch.cuda.empty_cache()
-                f.write(json.dumps(rec) + "\n")
+                prompt = FT_TEMPLATE.format(code=JitVulLoader.normalize(r[lvl]))
+                t0 = time.time()
+                response, in_tok, out_tok, status = engine.run(prompt)
+                dur = time.time() - t0
+                pred = parse_prediction(response) if status == "ok" else "UNKNOWN"
+                f.write(json.dumps({
+                    "idx": r["idx"], "label": r["label"], "context_config": lvl,
+                    "model": model_name, "input_tokens": in_tok, "output_tokens": out_tok,
+                    "latency_s": round(dur, 3) if status == "ok" else None,
+                    "response": response, "prediction": pred, "status": status,
+                    "cwe": r.get("cwe"), "project": r.get("project"),
+                }) + "\n")
                 f.flush()
-                n_done += 1
-                el = time.time() - t0
-                print(f"[{n_done}/{total}] idx={r['idx']} {lvl:8s} in={n_in:6d} "
-                      f"label={r['label']} pred={rec['prediction']} {rec['status']} "
-                      f"elapsed={el/60:.1f}m", flush=True)
-    print(f"done {run_dir}")
+                n_new += 1
+                line.append(f"{TAGS[lvl]}={pred}({in_tok}{'' if status == 'ok' else ' ' + status})")
+            if line:
+                eta = (time.time() - t_start) / n_new * (todo - n_new) / 60
+                truth = "VULNERABLE" if r["label"] == 1 else "SAFE"
+                print(f"[{i + 1}/{len(rows)}] idx={r['idx']} truth={truth} "
+                      f"{' '.join(line)}  eta {eta:.0f} min", flush=True)
+
+    print(f"\ndone in {(time.time() - t_start) / 60:.1f} min")
+    print(f"analyse: python -m vulncost.reposvul_metrics {out_path}")
 
 
 if __name__ == "__main__":
