@@ -11,6 +11,9 @@ Runs on the RACE GPU box, from the repo root.
     # placebo: the caller/callee LAYOUT with the context removed, every pair.
     # Separates the effect of the prompt format from the effect of the context.
     nohup python -m vulncost.runner_jitvul_ft --placebo --label jitvul_ft_placebo > logs/jitvul_ft_placebo.out 2>&1 &
+    # data-flow rung only (function-only results already exist for the same pairs)
+    python -m vulncost.runner_jitvul_ft --dataflow --pairs 3 --label jitvul_ft_df_smoke
+    nohup python -m vulncost.runner_jitvul_ft --dataflow --label jitvul_ft_dataflow > logs/jitvul_ft_dataflow.out 2>&1 &
 
 Writes logs/<timestamp>_<label>/calls.jsonl (one row per inference, flushed
 as it goes) and run_meta.json (what produced it). Analyse with full_metrics.
@@ -35,6 +38,8 @@ from vulncost.enums.context_config import ContextConfig
 DEFAULT_ADAPTER = "~/studies/swb-s4130302-personal-study/vd-lora-v2"
 BASE_MODEL = "unsloth/Qwen2.5-Coder-7B-Instruct-bnb-4bit"
 RUNGS = (ContextConfig.function_only, ContextConfig.plus_caller_callee)
+TAGS = {ContextConfig.function_only: "fo", ContextConfig.plus_caller_callee: "cc",
+        ContextConfig.plus_data_flow: "df"}
 
 
 def sha256(path):
@@ -66,6 +71,7 @@ def write_meta(run_dir, args, model_path, model_name, n_pairs):
         "data_sha256": sha256(args.data),
         "loader": "JitVulLoader(clean=True, dedupe=True, normalize_ws=True)",
         "placebo": args.placebo,
+        "dataflow": args.dataflow,
         "pairs_requested": args.pairs or "all",
         "pairs_available": n_pairs,
         "git_commit": git("rev-parse", "HEAD"),
@@ -88,8 +94,17 @@ def main():
     ap.add_argument("--label", default="jitvul_ft")
     ap.add_argument("--placebo", action="store_true",
                     help="run only the caller/callee rung with all context removed")
+    ap.add_argument("--dataflow", action="store_true",
+                    help="run only the data-flow rung (target function + its data flow)")
     args = ap.parse_args()
-    rungs = (ContextConfig.plus_caller_callee,) if args.placebo else RUNGS
+    if args.placebo and args.dataflow:
+        raise SystemExit("--placebo and --dataflow are separate runs")
+    if args.placebo:
+        rungs = (ContextConfig.plus_caller_callee,)
+    elif args.dataflow:
+        rungs = (ContextConfig.plus_data_flow,)
+    else:
+        rungs = RUNGS
 
     if args.adapter == "base":
         model_path, model_name = BASE_MODEL, "qwen2.5-coder-7b-instruct-4bit"
@@ -111,7 +126,8 @@ def main():
     run_dir = os.path.dirname(str(logger.path))
     write_meta(run_dir, args, model_path, model_name, n_pairs)
     print(f"run {logger.run_id}: {n_pairs} pairs, {len(samples) * len(rungs)} inferences"
-          + ("  [PLACEBO: context removed]" if args.placebo else ""))
+          + ("  [PLACEBO: context removed]" if args.placebo else "")
+          + ("  [DATA FLOW rung]" if args.dataflow else ""))
 
     t_start = time.time()
     for i, (sample, extracted) in enumerate(samples):
@@ -132,8 +148,7 @@ def main():
                 label=sample.target, status="ok" if status == "ok" else "failed",
                 duration_s=dur, temperature=0.0, seed=0,
             ))
-            tag = "fo" if cfg == ContextConfig.function_only else "cc"
-            line.append(f"{tag}={pred}({in_tok}{'' if status == 'ok' else ' ' + status})")
+            line.append(f"{TAGS[cfg]}={pred}({in_tok}{'' if status == 'ok' else ' ' + status})")
 
         done = i + 1
         eta = (time.time() - t_start) / done * (len(samples) - done) / 60

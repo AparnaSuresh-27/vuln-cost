@@ -8,6 +8,8 @@ verbatim; the rungs differ only in what is placed in {code}.
     function_only       {code} = the target function, exactly as in training
     plus_caller_callee  {code} = the target function, then its resolved callees
                         and callers, laid out as C with // section comments
+    plus_data_flow      {code} = the target function, then its intra-function
+                        data flow as // comments (see vulncost/dataflow.py)
 
 The old prompt_builder.py (generic "Classify this function..." prompt) is left
 untouched so the earlier untrained-baseline runs stay reproducible.
@@ -47,4 +49,7 @@ def build_ft_prompt(context_config: ContextConfig, func: str, extracted: dict = 
         if extracted is None:
             raise ValueError("plus_caller_callee requires extracted context")
         return FT_TEMPLATE.format(code=render_caller_callee(func, extracted))
+    if context_config == ContextConfig.plus_data_flow:
+        from vulncost.dataflow import render_data_flow   # needs tree-sitter only for this rung
+        return FT_TEMPLATE.format(code=render_data_flow(func))
     raise ValueError(f"No fine-tuned builder for {context_config}")

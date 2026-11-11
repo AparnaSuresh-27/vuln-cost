@@ -8,6 +8,7 @@ complete and ok in EVERY condition are used, so rows are directly comparable.
         ft_fo=logs/<ft_norm>/calls.jsonl:function_only \
         ft_cc=logs/<ft_norm>/calls.jsonl:plus_caller_callee \
         ft_placebo=logs/<placebo>/calls.jsonl:plus_caller_callee \
+        ft_df=logs/<dataflow>/calls.jsonl:plus_data_flow \
         base_fo=logs/<base_norm>/calls.jsonl:function_only \
         base_cc=logs/<base_norm>/calls.jsonl:plus_caller_callee \
         [--exclude results/overlap_primevul_train.txt]
@@ -23,6 +24,8 @@ from math import comb
 COMPARISONS = [("ft_fo", "ft_cc", "context, fine-tuned (total)"),
                ("ft_fo", "ft_placebo", "layout only, fine-tuned"),
                ("ft_placebo", "ft_cc", "context itself, fine-tuned"),
+               ("ft_fo", "ft_df", "data flow, fine-tuned"),
+               ("ft_df", "ft_cc", "data flow vs caller/callee"),
                ("base_fo", "base_cc", "context, base model"),
                ("base_fo", "ft_fo", "fine-tuning, function-only"),
                ("base_cc", "ft_cc", "fine-tuning, caller/callee")]

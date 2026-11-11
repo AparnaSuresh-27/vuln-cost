@@ -5,3 +5,4 @@ class ContextConfig(Enum):
     plus_caller_callee = "plus_caller_callee"
     plus_cpg_slice = "plus_cpg_slice"
     plus_nl_description = "plus_nl_description"
+    plus_data_flow = "plus_data_flow"
