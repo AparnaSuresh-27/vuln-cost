@@ -1,0 +1,9 @@
+pairs common to all conditions: 794
+
+condition            P-C     P-V     P-B     P-R  tok/sample
+ft_fo         0.210 (167)   0.494   0.282   0.014        1537
+ft_df         0.180 (143)   0.520   0.287   0.013        2406
+sep_fo        0.202 (160)   0.508   0.273   0.018        1537
+
+comparison                    A           B            A only B only       p
+data flow, fine-tuned         ft_fo       ft_df            31      7   0.000

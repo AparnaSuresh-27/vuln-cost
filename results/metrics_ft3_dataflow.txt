@@ -1,0 +1,26 @@
+Loaded 3200 records from logs/20261111_082907_jitvul_ft_dataflow/calls.jsonl
+sample_ids logged 800 | scored 794 | dropped: failed 6, incomplete/duplicate 0, excluded 0
+
+=======================================================
+function_only  (n=1588, 794 pairs)
+=======================================================
+  Accuracy 0.598  Precision 0.581  Recall 0.704  F1 0.637
+  Confusion: TP=559 FP=403 TN=391 FN=235  (UNKNOWN answers: 0)
+  Pairwise:
+    P-C both correct         : 0.210 (167/794)
+    P-V both -> VULNERABLE   : 0.494 (392/794)
+    P-B both -> SAFE         : 0.282 (224/794)
+    P-R reversed             : 0.014 (11/794)
+  Tokens: input 2440598 (1537/sample), output 6062 (3.8/sample)
+
+=======================================================
+plus_data_flow  (n=1588, 794 pairs)
+=======================================================
+  Accuracy 0.584  Precision 0.568  Recall 0.700  F1 0.627
+  Confusion: TP=556 FP=423 TN=371 FN=238  (UNKNOWN answers: 0)
+  Pairwise:
+    P-C both correct         : 0.180 (143/794)
+    P-V both -> VULNERABLE   : 0.520 (413/794)
+    P-B both -> SAFE         : 0.287 (228/794)
+    P-R reversed             : 0.013 (10/794)
+  Tokens: input 3820269 (2406/sample), output 6113 (3.8/sample)
