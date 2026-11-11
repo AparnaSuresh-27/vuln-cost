@@ -11,7 +11,7 @@ Runs on the RACE GPU box, from the repo root.
     # placebo: the caller/callee LAYOUT with the context removed, every pair.
     # Separates the effect of the prompt format from the effect of the context.
     nohup python -m vulncost.runner_jitvul_ft --placebo --label jitvul_ft_placebo > logs/jitvul_ft_placebo.out 2>&1 &
-    # data-flow rung only (function-only results already exist for the same pairs)
+    # function-only + data-flow, in one run on one software stack
     python -m vulncost.runner_jitvul_ft --dataflow --pairs 3 --label jitvul_ft_df_smoke
     nohup python -m vulncost.runner_jitvul_ft --dataflow --label jitvul_ft_dataflow > logs/jitvul_ft_dataflow.out 2>&1 &
 
@@ -95,14 +95,15 @@ def main():
     ap.add_argument("--placebo", action="store_true",
                     help="run only the caller/callee rung with all context removed")
     ap.add_argument("--dataflow", action="store_true",
-                    help="run only the data-flow rung (target function + its data flow)")
+                    help="run function-only and the data-flow rung (target function + its data flow)")
     args = ap.parse_args()
     if args.placebo and args.dataflow:
         raise SystemExit("--placebo and --dataflow are separate runs")
     if args.placebo:
         rungs = (ContextConfig.plus_caller_callee,)
     elif args.dataflow:
-        rungs = (ContextConfig.plus_data_flow,)
+        # function-only re-run alongside, so both rungs share one software stack
+        rungs = (ContextConfig.function_only, ContextConfig.plus_data_flow)
     else:
         rungs = RUNGS
 
